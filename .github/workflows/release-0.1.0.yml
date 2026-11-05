@@ -1,0 +1,88 @@
+name: Release My Daily 0.1.0
+
+on:
+  push:
+    branches: [release/0.1.0]
+    paths: [.github/workflows/release-0.1.0.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-my-daily-0.1.0
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SOURCE_SHA: 37378497f7f7831b0a04179f0936e342bee84ce2
+    steps:
+      - name: Check out the verified release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 37378497f7f7831b0a04179f0936e342bee84ce2
+          persist-credentials: false
+
+      - name: Verify and package release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check main.js
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import json
+          import shutil
+          import subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == '37378497f7f7831b0a04179f0936e342bee84ce2'
+          for name in ['package.json', 'manifest.json', 'package-lock.json']:
+              assert json.loads(Path(name).read_text())['version'] == '0.1.0', name
+          expected = {
+              'main.js': 'e9085dd090e6217951b17befc63ee9336bc61882e33cf67dd7adafb2786a51ca',
+              'manifest.json': 'd865f2a3db3c765c1ae182003193c5e001ec45cccfc348de57f4fac2fe6e8340',
+          }
+          assets = Path('release-assets')
+          assets.mkdir()
+          for name, digest in expected.items():
+              assert sha256(Path(name).read_bytes()).hexdigest() == digest, name
+              shutil.copyfile(name, assets / name)
+          archive_path = assets / 'my-daily-0.1.0.zip'
+          with ZipFile(archive_path, 'w', compression=ZIP_DEFLATED) as archive:
+              for name in expected:
+                  archive.write(assets / name, 'my-daily/' + name)
+          with ZipFile(archive_path) as archive:
+              assert archive.testzip() is None
+              for name in expected:
+                  assert archive.read('my-daily/' + name) == Path(name).read_bytes()
+          for path in sorted(assets.iterdir()):
+              print(path.name, sha256(path.read_bytes()).hexdigest())
+          PY
+          cat > release-notes.md <<'RELEASE_NOTES'
+          My Daily の初回リリースです。
+          
+          テンプレートの見出しを `## @carry 継続タスク` のように書くと、そのセクションの本文を直近の過去のデイリーノートから引き継ぎます。それ以外の部分はテンプレートから作成します。
+          
+          - 引き継ぎマーカー、保存先フォルダ、テンプレート、日付形式を設定できます。
+          - 子見出しや完了済みタスクも含めて引き継ぎます。
+          - 日が空いていても直近の過去ノートを参照します。前回の対象セクションがなければテンプレートを使います。
+          - 今日のノートが既にある場合は、内容を変更せず開きます。
+          - `{{title}}`、`{{date}}`、`{{time}}` などのテンプレート変数に対応しています。
+          
+          インストール: `my-daily-0.1.0.zip` を展開し、`my-daily` フォルダを Vault の `.obsidian/plugins/` に置いて、Obsidian のコミュニティプラグイン設定から有効にしてください。`main.js` と `manifest.json` を個別に配置することもできます。
+          
+          作成には「My Daily: 今日のデイリーノートを作成・開く」コマンドを使用します。設定例とサンプルテンプレートは [README](https://github.com/m13yama/obsidian_my_daily/blob/0.1.0/README.md) を参照してください。
+          
+          検証: 型チェック、ビルド、36件の自動テストに成功。Obsidian 本体での画面操作による検証は未実施です。
+          RELEASE_NOTES
+
+      - name: Publish 0.1.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create 0.1.0 release-assets/main.js release-assets/manifest.json release-assets/my-daily-0.1.0.zip --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "My Daily 0.1.0" --notes-file release-notes.md --latest
+          gh release view 0.1.0 --repo "$GITHUB_REPOSITORY" --json url,tagName,isDraft,assets
