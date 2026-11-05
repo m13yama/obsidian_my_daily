@@ -1,0 +1,9 @@
+{
+  "id": "my-daily",
+  "name": "My Daily",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "テンプレートと前回の指定セクションを組み合わせてデイリーノートを作成します。",
+  "author": "yuki",
+  "isDesktopOnly": false
+}

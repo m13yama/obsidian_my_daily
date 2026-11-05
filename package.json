@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-my-daily",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Create daily notes from a template and carry selected sections forward.",
+  "main": "main.js",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "build": "npm run typecheck && node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --experimental-test-isolation=none tests/*.test.ts",
+    "check": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.3",
+    "esbuild": "0.28.2",
+    "moment": "2.29.4",
+    "obsidian": "1.13.1",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}
