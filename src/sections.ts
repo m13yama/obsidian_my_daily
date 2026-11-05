@@ -2,6 +2,7 @@ interface Section {
   title: string;
   level: number;
   start: number;
+  titleStart: number;
   bodyStart: number;
   end: number;
 }
@@ -100,6 +101,7 @@ function sections(markdown: string): Section[] {
         title: (atx[2] ?? "").replace(/[ \t]+#+[ \t]*$/, "").trim(),
         level: atx[1].length,
         start: line.start,
+        titleStart: line.start + text.length - (atx[2] ?? "").trimStart().length,
         bodyStart: line.end,
         end: markdown.length,
       });
@@ -109,6 +111,7 @@ function sections(markdown: string): Section[] {
         title: paragraph.map((item) => item.text.trim()).join(" "),
         level: setext[1][0] === "=" ? 1 : 2,
         start: paragraph[0].start,
+        titleStart: paragraph[0].start + paragraph[0].text.length - paragraph[0].text.trimStart().length,
         bodyStart: line.end,
         end: markdown.length,
       });
@@ -134,6 +137,17 @@ function markedTitle(title: string, marker: string): string | null {
   const name = rest.trim();
   if (!name) throw new Error(`マーカー「${marker}」の後に空白と見出し名を指定してください。`);
   return name;
+}
+
+function removeHeadingMarkers(markdown: string, marker: string): string {
+  let content = markdown;
+  for (const heading of sections(markdown).reverse()) {
+    if (markedTitle(heading.title, marker) === null) continue;
+    const markerEnd = heading.titleStart + marker.length;
+    const spacing = /^[ \t\r\n]*/.exec(markdown.slice(markerEnd))![0].length;
+    content = content.slice(0, heading.titleStart) + content.slice(markerEnd + spacing);
+  }
+  return content;
 }
 
 function carrySections(template: string, marker: string): { name: string; target: Section }[] {
@@ -190,5 +204,5 @@ export function mergeSections(template: string, previous: string | null, marker:
     content = content.slice(0, target.bodyStart) + body + content.slice(target.end);
     carried.unshift(name);
   }
-  return { content, carried, missing };
+  return { content: removeHeadingMarkers(content, marker), carried, missing };
 }

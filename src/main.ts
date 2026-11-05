@@ -98,7 +98,7 @@ class MyDailySettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("p", { text: "テンプレートの見出し名の先頭にマーカーを付けると、そのセクションを直近の過去のデイリーノートから引き継ぎます。それ以外はテンプレートを使います。" });
+    containerEl.createEl("p", { text: "テンプレートの見出し名の先頭にマーカーを付けると、そのセクションを直近の過去のデイリーノートから引き継ぎます。それ以外はテンプレートを使います。作成するノートの見出しからはマーカーを取り除きます。" });
     const fields: { key: keyof MyDailySettings; name: string; description: string; placeholder: string }[] = [
       { key: "dailyFolder", name: "保存先フォルダ", description: "Vaultからの相対パス。空欄ならVault直下に保存します。", placeholder: "Daily" },
       { key: "templatePath", name: "テンプレート", description: "テンプレートノートのパス。.md は省略できます。", placeholder: "Templates/Daily.md" },

@@ -86,8 +86,9 @@ test("the registered command builds a daily note without changing its source", a
   env.commands[0].callback();
   await env.plugin.openDaily();
   assert.equal(env.creates, 1);
-  assert.equal(env.contents.get("Daily/2026-11-05.md"), "# 2026-11-05\n\n## @carry 継続タスク\n- [ ] continue\n\n## 日記\n今日の記録\n");
+  assert.equal(env.contents.get("Daily/2026-11-05.md"), "# 2026-11-05\n\n## 継続タスク\n- [ ] continue\n\n## 日記\n今日の記録\n");
   assert.equal(env.contents.get("Daily/2026-11-03.md"), previous);
+  assert.equal(env.contents.get("Templates/Daily.md"), template);
   assert.deepEqual(env.opened, ["Daily/2026-11-05.md"]);
 });
 
@@ -105,7 +106,7 @@ test("first-day creation uses the template and creates missing dated folders", a
   const env = environment({ "Templates/Daily.md": template }, { dateFormat: "YYYY/MM/YYYY-MM-DD" });
   await env.plugin.onload();
   await env.plugin.openDaily();
-  assert.equal(env.contents.get("Daily/2026/11/2026-11-05.md"), template.replace("{{date}}", "2026-11-05"));
+  assert.equal(env.contents.get("Daily/2026/11/2026-11-05.md"), "# 2026-11-05\n\n## 継続タスク\n- [ ] initial\n\n## 日記\n今日の記録\n");
   assert.ok(env.entries.has("Daily/2026/11"));
 });
 
@@ -162,6 +163,7 @@ test("a missing source heading retains the default and reports it", async () => 
   await env.plugin.onload();
   await env.plugin.openDaily();
   assert.ok(env.contents.get("Daily/2026-11-05.md")?.includes("initial"));
+  assert.ok(env.contents.get("Daily/2026-11-05.md")?.includes("## 継続タスク\n"));
   assert.ok(env.notices.some((notice) => notice.includes("テンプレートを使いました")));
 });
 
@@ -181,7 +183,7 @@ test("a custom marker controls which template sections are inherited", async () 
   }, { carryMarker: "[carry]" });
   await env.plugin.onload();
   await env.plugin.openDaily();
-  assert.equal(env.contents.get("Daily/2026-11-05.md"), "## [carry] メモ\ncarry\n## @carry 継続タスク\nfresh\n");
+  assert.equal(env.contents.get("Daily/2026-11-05.md"), "## メモ\ncarry\n## @carry 継続タスク\nfresh\n");
 });
 
 test("a template without marked headings does not read the previous note", async () => {

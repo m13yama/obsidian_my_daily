@@ -155,6 +155,7 @@ function sections(markdown) {
         title: (atx[2] ?? "").replace(/[ \t]+#+[ \t]*$/, "").trim(),
         level: atx[1].length,
         start: line.start,
+        titleStart: line.start + text.length - (atx[2] ?? "").trimStart().length,
         bodyStart: line.end,
         end: markdown.length
       });
@@ -164,6 +165,7 @@ function sections(markdown) {
         title: paragraph.map((item) => item.text.trim()).join(" "),
         level: setext[1][0] === "=" ? 1 : 2,
         start: paragraph[0].start,
+        titleStart: paragraph[0].start + paragraph[0].text.length - paragraph[0].text.trimStart().length,
         bodyStart: line.end,
         end: markdown.length
       });
@@ -187,6 +189,16 @@ function markedTitle(title, marker) {
   const name = rest.trim();
   if (!name) throw new Error(`\u30DE\u30FC\u30AB\u30FC\u300C${marker}\u300D\u306E\u5F8C\u306B\u7A7A\u767D\u3068\u898B\u51FA\u3057\u540D\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002`);
   return name;
+}
+function removeHeadingMarkers(markdown, marker) {
+  let content = markdown;
+  for (const heading of sections(markdown).reverse()) {
+    if (markedTitle(heading.title, marker) === null) continue;
+    const markerEnd = heading.titleStart + marker.length;
+    const spacing = /^[ \t\r\n]*/.exec(markdown.slice(markerEnd))[0].length;
+    content = content.slice(0, heading.titleStart) + content.slice(markerEnd + spacing);
+  }
+  return content;
 }
 function carrySections(template, marker) {
   if (!marker || /[\r\n]/.test(marker)) throw new Error("\u5F15\u304D\u7D99\u304E\u30DE\u30FC\u30AB\u30FC\u306B\u306F\u7A7A\u6B04\u3067\u306A\u30441\u884C\u306E\u6587\u5B57\u5217\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
@@ -232,7 +244,7 @@ function mergeSections(template, previous, marker) {
     content = content.slice(0, target.bodyStart) + body + content.slice(target.end);
     carried.unshift(name);
   }
-  return { content, carried, missing };
+  return { content: removeHeadingMarkers(content, marker), carried, missing };
 }
 
 // src/settings.ts
@@ -348,7 +360,7 @@ var MyDailySettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("p", { text: "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u306E\u898B\u51FA\u3057\u540D\u306E\u5148\u982D\u306B\u30DE\u30FC\u30AB\u30FC\u3092\u4ED8\u3051\u308B\u3068\u3001\u305D\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u3092\u76F4\u8FD1\u306E\u904E\u53BB\u306E\u30C7\u30A4\u30EA\u30FC\u30CE\u30FC\u30C8\u304B\u3089\u5F15\u304D\u7D99\u304E\u307E\u3059\u3002\u305D\u308C\u4EE5\u5916\u306F\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u4F7F\u3044\u307E\u3059\u3002" });
+    containerEl.createEl("p", { text: "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u306E\u898B\u51FA\u3057\u540D\u306E\u5148\u982D\u306B\u30DE\u30FC\u30AB\u30FC\u3092\u4ED8\u3051\u308B\u3068\u3001\u305D\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u3092\u76F4\u8FD1\u306E\u904E\u53BB\u306E\u30C7\u30A4\u30EA\u30FC\u30CE\u30FC\u30C8\u304B\u3089\u5F15\u304D\u7D99\u304E\u307E\u3059\u3002\u305D\u308C\u4EE5\u5916\u306F\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u4F7F\u3044\u307E\u3059\u3002\u4F5C\u6210\u3059\u308B\u30CE\u30FC\u30C8\u306E\u898B\u51FA\u3057\u304B\u3089\u306F\u30DE\u30FC\u30AB\u30FC\u3092\u53D6\u308A\u9664\u304D\u307E\u3059\u3002" });
     const fields = [
       { key: "dailyFolder", name: "\u4FDD\u5B58\u5148\u30D5\u30A9\u30EB\u30C0", description: "Vault\u304B\u3089\u306E\u76F8\u5BFE\u30D1\u30B9\u3002\u7A7A\u6B04\u306A\u3089Vault\u76F4\u4E0B\u306B\u4FDD\u5B58\u3057\u307E\u3059\u3002", placeholder: "Daily" },
       { key: "templatePath", name: "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8", description: "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u30CE\u30FC\u30C8\u306E\u30D1\u30B9\u3002.md \u306F\u7701\u7565\u3067\u304D\u307E\u3059\u3002", placeholder: "Templates/Daily.md" },
